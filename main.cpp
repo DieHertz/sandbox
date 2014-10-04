@@ -3,10 +3,10 @@
 #include <thread>
 
 int main(int argc, char** argv) {
-    if (argc != 3) throw std::invalid_argument{"no host and port supplied"};
+    if (argc != 2 && argc != 3) throw std::invalid_argument{"no port and host supplied"};
 
-    const auto address = argv[1];
-    const std::uint16_t port = std::stoi(argv[2]);
+    const std::uint16_t port = std::stoi(argv[1]);
+    const auto address = argc == 3 ? argv[2] : "";
     net::socket server_socket{address, port};
 
     while (true) {
