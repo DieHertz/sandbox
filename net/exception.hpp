@@ -11,11 +11,6 @@ namespace net {
         exception(const std::string& what = "net::exception") : std::runtime_error{what} {}
     };
 
-    class invalid_address : public exception {
-    public:
-        invalid_address(const std::string& address) : exception{"the address is invalid: `" + address + '`'} {}
-    };
-
     class errno_exception : public exception {
     public:
         errno_exception() : exception{"errno " + std::to_string(errno) + " : " + std::strerror(errno)} {}

@@ -11,21 +11,24 @@ int main(int argc, char** argv) {
 
     while (true) {
         auto client_socket = server_socket.accept();
-        std::cout << "client connected: " << client_socket.get_fd() << std::endl;
 
         std::thread{[] (net::socket client_socket) {
             try {
-                std::string in;
-
                 const auto buffer_size = 4096;
                 char buffer[buffer_size];
-                while (const auto bytes_received = recv(client_socket.get_fd(), buffer, buffer_size, 0)) {
+
+                while (true) {
+                    const auto bytes_received = recv(client_socket.get_fd(), buffer, buffer_size, 0);
                     if (bytes_received == -1) throw net::errno_exception{};
 
-                    in.insert(std::end(in), buffer, buffer + bytes_received);
-                }
+                    int total_bytes_sent{};
+                    while (total_bytes_sent < bytes_received) {
+                        const auto bytes_sent = send(client_socket.get_fd(), buffer + total_bytes_sent, bytes_received - total_bytes_sent, 0);
+                        if (bytes_sent == -1) throw net::errno_exception{};
 
-                std::cout << in << std::endl;
+                        total_bytes_sent += bytes_sent;
+                    }
+                }
             } catch (const std::exception& e) {
                 std::cerr << e.what() << std::endl;
             }
