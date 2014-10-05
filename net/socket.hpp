@@ -2,7 +2,6 @@
 
 #include "socket_utils.hpp"
 #include "exception.hpp"
-#include <sys/time.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cstdint>
@@ -17,6 +16,7 @@ namespace net {
 
     class socket {
     public:
+        constexpr socket() = default;
         explicit socket(const int socket_fd) : socket_fd{socket_fd} {}
         socket(const socket_type type, const std::uint16_t port) : socket{type, {}, port} {}
         socket(const socket_type type, const std::string& address, const std::uint16_t port)
@@ -31,7 +31,7 @@ namespace net {
         }
 
         ~socket() {
-            if (!is_valid()) return;
+            if (socket_fd == 0) return;
 
             shutdown(socket_fd, SHUT_RDWR);
             close(socket_fd);
@@ -47,12 +47,21 @@ namespace net {
             return socket{client_socket_fd};
         }
 
+        bool accept_non_blocking(socket& s, const std::int32_t timeout_msec = 0) {
+            if (!is_ready(socket_fd, select_type::read, timeout_msec)) return false;
+
+            s = accept();
+            return true;
+        }
+
         int get_fd() const { return socket_fd; }
 
         std::uint32_t read(std::vector<char>& buffer, const std::uint32_t num_bytes, const std::uint32_t offset) {
+            if (num_bytes == 0) throw std::invalid_argument{"num_bytes cannot be zero"};
+
             const auto bytes_received = recv(socket_fd, buffer.data() + offset, num_bytes, 0);
             if (bytes_received == -1) throw errno_exception{};
-            else if (bytes_received == 0 && num_bytes != 0) throw connection_closed{};
+            else if (bytes_received == 0) throw connection_closed{};
 
             return bytes_received;
         }
@@ -66,46 +75,28 @@ namespace net {
             return buffer;
         }
 
-        void write(const std::vector<char>& buffer, const std::uint32_t num_bytes, const std::uint32_t offset) {
+        void write(const char* buffer, const std::uint32_t num_bytes) {
             std::uint32_t total_bytes_sent{};
 
             while (total_bytes_sent < num_bytes) {
-                const auto bytes_sent = send(socket_fd, buffer.data() + offset, num_bytes - total_bytes_sent, 0);
+                const auto bytes_sent = send(socket_fd, buffer, num_bytes - total_bytes_sent, 0);
                 if (bytes_sent == -1) throw errno_exception{};
 
                 total_bytes_sent += bytes_sent;
             }
         }
 
+        void write(const std::vector<char>& buffer, const std::uint32_t num_bytes, const std::uint32_t offset) {
+            write(buffer.data() + offset, num_bytes);
+        }
+
         void write(const std::vector<char>& buffer) {
-            write(buffer, buffer.size(), 0);
+            write(buffer.data(), buffer.size());
         }
 
-        bool is_data_available(const std::int32_t timeout_msec = timeout_indefinite) const {
-            if (!is_valid()) return false;
-
-            fd_set read_fds{};
-
-            FD_ZERO(&read_fds);
-            FD_SET(socket_fd, &read_fds);
-
-            if (timeout_msec == -1) {
-                select(socket_fd + 1, &read_fds, nullptr, nullptr, nullptr);
-            } else {
-                auto tv = get_timeval(timeout_msec);
-                select(socket_fd + 1, &read_fds, nullptr, nullptr, &tv);
-            }
-
-            return FD_ISSET(socket_fd, &read_fds);
-        }
-
-        bool is_valid() const { return socket_fd != -1; }
+        bool is_valid() const { return socket_fd != 0; }
 
     private:
-        static timeval get_timeval(const std::int32_t msec) {
-            return { msec / 1000, 0 };
-        }
-
-        int socket_fd{-1};
+        int socket_fd{};
     };
 }

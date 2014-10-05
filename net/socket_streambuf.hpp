@@ -60,7 +60,7 @@ namespace net {
 
         void send() {
             const auto n = pptr() - pbase();
-            s.write(out_buffer, n, 0);
+            s.write(pbase(), n);
             pbump(-n);
         }
 
