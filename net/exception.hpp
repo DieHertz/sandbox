@@ -15,4 +15,9 @@ namespace net {
     public:
         errno_exception() : exception{"errno " + std::to_string(errno) + " : " + std::strerror(errno)} {}
     };
+
+    class connection_closed : public exception {
+    public:
+        connection_closed() : exception{"connectiong has been closed by the remote side"} {}
+    };
 }

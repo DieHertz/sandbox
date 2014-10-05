@@ -51,7 +51,8 @@ namespace net {
 
         std::uint32_t read(std::vector<char>& buffer, const std::uint32_t num_bytes, const std::uint32_t offset) {
             const auto bytes_received = recv(socket_fd, buffer.data() + offset, num_bytes, 0);
-            if (bytes_received == -1) throw net::errno_exception{};
+            if (bytes_received == -1) throw errno_exception{};
+            else if (bytes_received == 0 && num_bytes != 0) throw connection_closed{};
 
             return bytes_received;
         }

@@ -17,19 +17,26 @@ void client_bot_function(const std::string& address, const std::uint16_t port) {
 void client_handler_function(net::socket socket) {
     net::socket_stream stream{socket};
 
-    while (true) {
-        std::string received_string;
-        std::getline(stream, received_string);
+    std::cout << "client " << socket.get_fd() << " has connected" << std::endl;
 
+    std::string received_string;
+    while (std::getline(stream, received_string)) {
         std::cout << "client " << socket.get_fd() << " : " << received_string << std::endl;
 
-        stream << received_string << std::endl;
+        if (received_string.find("ping") == 0) {
+            stream << "pong" << std::endl;
+        } else {
+            stream << received_string << std::endl;
+        }
 
         if (received_string.find("exit") == 0) throw net::exception{"exit requested"};
     }
+
+    std::cout << "client " << socket.get_fd() << " has disconnected" << std::endl;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+try {
     if (argc != 2 && argc != 3) throw std::invalid_argument{"no port and host supplied"};
 
     const std::uint16_t port = std::stoi(argv[1]);
@@ -42,4 +49,8 @@ int main(int argc, char** argv) {
         auto client_socket = server_socket.accept();
         std::thread{client_handler_function, std::move(client_socket)}.detach();
     }
+} catch (const std::exception& e) {
+    std::cerr << "exception: " << e.what() << std::endl;
+} catch (...) {
+    std::cerr << "unexpected exception" << std::endl;
 }
