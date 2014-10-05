@@ -1,38 +1,29 @@
 #include "net/socket.hpp"
+#include "net/socket_stream.hpp"
 #include <iostream>
 #include <thread>
 #include <chrono>
 
 void client_bot_function(const std::string& address, const std::uint16_t port) {
     net::socket socket{net::socket_type::client, address, port};
+    net::socket_stream stream{socket};
 
-    const auto data = "ping";
-
-    while (const auto bytes_sent = send(socket.get_fd(), data, std::strlen(data), 0)) {
-        if (bytes_sent == -1) throw net::errno_exception{};
-
-        std::this_thread::sleep_for(std::chrono::milliseconds{500});
+    while (true) {
+        stream << "ping" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds{1});
     }
 }
 
 void client_handler_function(net::socket socket) {
-    const auto buffer_size = 4096;
-    char buffer[buffer_size];
+    net::socket_stream stream{socket};
 
     while (true) {
-        const auto bytes_received = recv(socket.get_fd(), buffer, buffer_size, 0);
-        if (bytes_received == -1) throw net::errno_exception{};
+        std::string received_string;
+        std::getline(stream, received_string);
 
-        const std::string received_string{buffer, buffer + bytes_received};
         std::cout << "client " << socket.get_fd() << " : " << received_string << std::endl;
 
-        int total_bytes_sent{};
-        while (total_bytes_sent < bytes_received) {
-            const auto bytes_sent = send(socket.get_fd(), buffer + total_bytes_sent, bytes_received - total_bytes_sent, 0);
-            if (bytes_sent == -1) throw net::errno_exception{};
-
-            total_bytes_sent += bytes_sent;
-        }
+        stream << received_string << std::endl;
 
         if (received_string.find("exit") == 0) throw net::exception{"exit requested"};
     }
