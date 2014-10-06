@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 namespace net {
+namespace tcp {
     class socket_streambuf : public std::streambuf {
     public:
         explicit socket_streambuf(socket& s, const std::size_t buffer_size = 256, const std::size_t put_back = 8)
@@ -69,4 +70,5 @@ namespace net {
         const std::size_t put_back;
         std::vector<char> out_buffer;
     };
+}
 }

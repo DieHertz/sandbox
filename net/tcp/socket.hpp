@@ -1,7 +1,8 @@
 #pragma once
 
-#include "socket_utils.hpp"
-#include "exception.hpp"
+#include "create_socket.hpp"
+#include <net/socket_utils.hpp>
+#include <net/exception.hpp>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cstdint>
@@ -9,6 +10,7 @@
 #include <vector>
 
 namespace net {
+namespace tcp {
     enum timeout_type : std::int32_t {
         timeout_indefinite = -1,
         timeout_none
@@ -20,7 +22,7 @@ namespace net {
         explicit socket(const int socket_fd) : socket_fd{socket_fd} {}
         socket(const socket_type type, const std::uint16_t port) : socket{type, {}, port} {}
         socket(const socket_type type, const std::string& address, const std::uint16_t port)
-            : socket_fd{create_socket_fd(type, address, port)} {}
+            : socket_fd{create_socket(type, address, port)} {}
 
         socket(socket&& other) { *this = std::move(other); }
 
@@ -99,4 +101,5 @@ namespace net {
     private:
         int socket_fd{};
     };
+}
 }
